@@ -726,6 +726,66 @@ macro_rules! uint_impl {
             }
         }
 
+        #[doc = concat!(
+            "Checked integer subtraction. Computes `self - rhs` and checks if the result fits into an [`",
+            stringify!($SignedT), "`], returning `None` if overflow occurred."
+        )]
+        ///
+        /// # Examples
+        ///
+        /// Basic usage:
+        ///
+        /// ```
+        /// #![feature(unsigned_signed_diff)]
+        #[doc = concat!("assert_eq!(10", stringify!($SelfT), ".checked_signed_diff(2), Some(8));")]
+        #[doc = concat!("assert_eq!(2", stringify!($SelfT), ".checked_signed_diff(10), Some(-8));")]
+        #[doc = concat!(
+            "assert_eq!(",
+            stringify!($SelfT),
+            "::MAX.checked_signed_diff(",
+            stringify!($SignedT),
+            "::MAX as ",
+            stringify!($SelfT),
+            "), None);"
+        )]
+        #[doc = concat!(
+            "assert_eq!((",
+            stringify!($SignedT),
+            "::MAX as ",
+            stringify!($SelfT),
+            ").checked_signed_diff(",
+            stringify!($SelfT),
+            "::MAX), Some(",
+            stringify!($SignedT),
+            "::MIN));"
+        )]
+        #[doc = concat!(
+            "assert_eq!((",
+            stringify!($SignedT),
+            "::MAX as ",
+            stringify!($SelfT),
+            " + 1).checked_signed_diff(0), None);"
+        )]
+        #[doc = concat!(
+            "assert_eq!(",
+            stringify!($SelfT),
+            "::MAX.checked_signed_diff(",
+            stringify!($SelfT),
+            "::MAX), Some(0));"
+        )]
+        /// ```
+        #[unstable(feature = "unsigned_signed_diff", issue = "126041")]
+        #[inline]
+        pub const fn checked_signed_diff(self, rhs: Self) -> Option<$SignedT> {
+            let (res, overflow) = self.overflowing_signed_diff(rhs);
+
+            if !overflow {
+                Some(res)
+            } else {
+                None
+            }
+        }
+
         /// Checked integer multiplication. Computes `self * rhs`, returning
         /// `None` if overflow occurred.
         ///
@@ -1661,6 +1721,74 @@ macro_rules! uint_impl {
             intrinsics::saturating_sub(self, rhs)
         }
 
+        #[doc = concat!(
+            "Saturating integer subtraction. Computes `self - rhs`, saturating at the numeric bounds of [`",
+            stringify!($SignedT), "`], instead of overflowing."
+        )]
+        ///
+        /// # Examples
+        ///
+        /// Basic usage:
+        ///
+        /// ```
+        /// #![feature(unsigned_signed_diff)]
+        #[doc = concat!("assert_eq!(10", stringify!($SelfT), ".saturating_signed_diff(2), 8);")]
+        #[doc = concat!("assert_eq!(2", stringify!($SelfT), ".saturating_signed_diff(10), -8);")]
+        #[doc = concat!(
+            "assert_eq!(",
+            stringify!($SelfT),
+            "::MAX.saturating_signed_diff(",
+            stringify!($SignedT),
+            "::MAX as ",
+            stringify!($SelfT),
+            "), ",
+            stringify!($SignedT),
+            "::MAX);"
+        )]
+        #[doc = concat!(
+            "assert_eq!((",
+            stringify!($SignedT),
+            "::MAX as ",
+            stringify!($SelfT),
+            " - 1).saturating_signed_diff(",
+            stringify!($SelfT),
+            "::MAX), ",
+            stringify!($SignedT),
+            "::MIN);"
+        )]
+        #[doc = concat!(
+            "assert_eq!((",
+            stringify!($SignedT),
+            "::MAX as ",
+            stringify!($SelfT),
+            " + 1).saturating_signed_diff(0), ",
+            stringify!($SignedT),
+            "::MAX);"
+        )]
+        #[doc = concat!(
+            "assert_eq!(",
+            stringify!($SelfT),
+            "::MAX.saturating_signed_diff(",
+            stringify!($SelfT),
+            "::MAX), 0);"
+        )]
+        /// ```
+        #[unstable(feature = "unsigned_signed_diff", issue = "126041")]
+        #[must_use = "this returns the result of the operation, \
+                      without modifying the original"]
+        #[inline]
+        pub const fn saturating_signed_diff(self, rhs: Self) -> $SignedT {
+            let (res, overflow) = self.overflowing_signed_diff(rhs);
+
+            if !overflow {
+                res
+            } else if res < 0 {
+                <$SignedT>::MAX
+            } else {
+                <$SignedT>::MIN
+            }
+        }
+
         /// Saturating integer multiplication. Computes `self * rhs`,
         /// saturating at the numeric bounds instead of overflowing.
         ///
@@ -2230,6 +2358,73 @@ macro_rules! uint_impl {
             let (a, b) = self.overflowing_sub(rhs);
             let (c, d) = a.overflowing_sub(borrow as $SelfT);
             (c, b || d)
+        }
+
+        #[doc = concat!(
+            "Calculates `self` - `rhs`, returning the result in a [`",
+            stringify!($SignedT), "`]"
+        )]
+        ///
+        /// Returns a tuple of the subtraction along with a boolean indicating
+        /// whether an arithmetic overflow would occur. If an overflow would
+        /// have occurred then the wrapped value is returned.
+        ///
+        /// # Examples
+        ///
+        /// Basic usage:
+        ///
+        /// ```
+        /// #![feature(unsigned_signed_diff)]
+        #[doc = concat!("assert_eq!(10", stringify!($SelfT), ".overflowing_signed_diff(2), (8, false));")]
+        #[doc = concat!("assert_eq!(2", stringify!($SelfT), ".overflowing_signed_diff(10), (-8, false));")]
+        #[doc = concat!(
+            "assert_eq!(",
+            stringify!($SelfT),
+            "::MAX.overflowing_signed_diff(",
+            stringify!($SignedT),
+            "::MAX as ",
+            stringify!($SelfT),
+            "), (",
+            stringify!($SignedT),
+            "::MIN, true));"
+        )]
+        #[doc = concat!(
+            "assert_eq!((",
+            stringify!($SignedT),
+            "::MAX as ",
+            stringify!($SelfT),
+            ").overflowing_signed_diff(",
+            stringify!($SelfT),
+            "::MAX), (",
+            stringify!($SignedT),
+            "::MIN, false));"
+        )]
+        #[doc = concat!(
+            "assert_eq!((",
+            stringify!($SignedT),
+            "::MAX as ",
+            stringify!($SelfT),
+            " + 1).overflowing_signed_diff(0), (",
+            stringify!($SignedT),
+            "::MIN, true));"
+        )]
+        #[doc = concat!(
+            "assert_eq!(",
+            stringify!($SelfT),
+            "::MAX.overflowing_signed_diff(",
+            stringify!($SelfT),
+            "::MAX), (0, false));"
+        )]
+        /// ```
+        #[unstable(feature = "unsigned_signed_diff", issue = "126041")]
+        #[must_use = "this returns the result of the operation, \
+                      without modifying the original"]
+        #[inline]
+        pub const fn overflowing_signed_diff(self, rhs: Self) -> ($SignedT, bool) {
+            let res = self.wrapping_sub(rhs) as $SignedT;
+            let overflow = (self >= rhs) == (res < 0);
+
+            (res, overflow)
         }
 
         /// Computes the absolute difference between `self` and `other`.
